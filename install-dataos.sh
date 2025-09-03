@@ -3,11 +3,13 @@ set -euo pipefail
 
 # --- Prompt for API Key (hidden input) ---
 if [[ -z "${PRIME_APIKEY:-}" ]]; then
+  exec < /dev/tty
   read -r -s -p "🔑 Enter your PRIME_APIKEY: " PRIME_APIKEY
   echo
 fi
 
 # --- Prompt for CLI version (default = 2.8) ---
+exec < /dev/tty
 read -r -p "📦 Enter CLI version to install [default=2.8]: " CLI_VERSION
 CLI_VERSION="${CLI_VERSION:-2.8}"
 
