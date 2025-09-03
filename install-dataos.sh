@@ -3,12 +3,12 @@ set -euo pipefail
 
 # --- Prompt for API Key (hidden input) ---
 if [[ -z "${PRIME_APIKEY:-}" ]]; then
-  read -s -p "🔑 Enter your PRIME_APIKEY: " PRIME_APIKEY
+  read -r -s -p "🔑 Enter your PRIME_APIKEY: " PRIME_APIKEY
   echo
 fi
 
 # --- Prompt for CLI version (default = 2.8) ---
-read -p "📦 Enter CLI version to install [default=2.8]: " CLI_VERSION
+read -r -p "📦 Enter CLI version to install [default=2.8]: " CLI_VERSION
 CLI_VERSION="${CLI_VERSION:-2.8}"
 
 # --- Detect OS ---
@@ -42,17 +42,6 @@ tar -xvf "$FILE_NAME"
 # --- Move binary ---
 TARGET_DIR="$HOME/.dataos/bin"
 mkdir -p "$TARGET_DIR"
-
-# If old binary exists, warn user
-if [[ -f "$TARGET_DIR/dataos-ctl" ]]; then
-  echo "⚠️  A dataos-ctl binary already exists in $TARGET_DIR"
-  read -p "Do you want to overwrite it? [y/N]: " overwrite
-  if [[ ! "$overwrite" =~ ^[Yy]$ ]]; then
-    echo "🚫 Installation cancelled to avoid overwrite."
-    exit 0
-  fi
-fi
-
 mv ${OS_NAME}-${ARCH_NAME}/dataos-ctl "$TARGET_DIR/"
 
 # --- Update PATH ---
@@ -67,3 +56,4 @@ fi
 echo "🎉 DataOS CLI v${CLI_VERSION} installed successfully!"
 echo "➡️ Run 'source $SHELL_RC' or restart terminal."
 echo "➡️ Verify with: dataos-ctl version"
+
