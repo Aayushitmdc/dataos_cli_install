@@ -1,65 +1,57 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- Ask for API Key (hidden input) ---
-if [[ -z "${PRIME_APIKEY:-}" ]]; then
-  read -r -s -p "🔑 Enter your PRIME_APIKEY: " PRIME_APIKEY < /dev/tty
-  echo
-fi
-if [[ -z "$PRIME_APIKEY" ]]; then
-  echo "❌ PRIME_APIKEY is required. Exiting."
-  exit 1
-fi
+APP_NAME="dataos-ctl"
+TARGET_DIR="$HOME/.dataos/bin"
+CONFIG_DIR="$HOME/.config/dataos"
+CRED_FILE="$CONFIG_DIR/credentials"
+RELEASE_URL="https://prime.tmdata.io/plutus/api/v1/files/download"
 
 # --- Ask for CLI version ---
-read -r -p "📦 Enter CLI version to install (e.g., 2.9): " CLI_VERSION < /dev/tty
+read -r -p "📦 Enter CLI version (e.g., 2.9): " CLI_VERSION
 if [[ -z "$CLI_VERSION" ]]; then
-  echo "❌ CLI version is required. Exiting."
-  exit 1
+  echo "❌ CLI version required"; exit 1
 fi
 
-# --- Detect OS/Arch ---
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+# --- Detect architecture ---
 ARCH="$(uname -m)"
-
-case "$OS" in
-  linux)   OS_NAME="linux" ;;
-  darwin)  OS_NAME="darwin" ;;
-  *) echo "❌ Unsupported OS: $OS"; exit 1 ;;
-esac
-
 case "$ARCH" in
-  x86_64|amd64) ARCH_NAME="amd64" ;;
-  arm64|aarch64) ARCH_NAME="arm64" ;;
-  i386|i686) ARCH_NAME="386" ;;
-  *) echo "❌ Unsupported Arch: $ARCH"; exit 1 ;;
+  x86_64|amd64) ARCH_NAME="linux-amd64" ;;
+  arm64|aarch64) ARCH_NAME="linux-arm64" ;;
+  i386|i686) ARCH_NAME="linux-386" ;;
+  *) echo "❌ Unsupported arch: $ARCH"; exit 1 ;;
 esac
 
-FILE_NAME="dataos-ctl-${OS_NAME}-${ARCH_NAME}.tar.gz"
+FILE_NAME="${APP_NAME}-${ARCH_NAME}.tar.gz"
+
+# --- Get API key ---
+read -r -s -p "🔑 Enter PRIME_APIKEY: " PRIME_APIKEY
+echo
+if [[ -z "$PRIME_APIKEY" ]]; then
+  echo "❌ PRIME_APIKEY required"; exit 1
+fi
 
 # --- Download ---
-echo "⬇️ Downloading DataOS CLI v${CLI_VERSION} for ${OS_NAME}-${ARCH_NAME}..."
-curl --silent --location \
+echo "⬇️ Downloading $APP_NAME v$CLI_VERSION..."
+curl --fail --location \
+  --header "Authorization: Bearer ${PRIME_APIKEY}" \
   --output "$FILE_NAME" \
-  "https://prime.tmdata.io/plutus/api/v1/files/download?name=${FILE_NAME}&dir=cli-apps-${CLI_VERSION}&apikey=${PRIME_APIKEY}"
+  "${RELEASE_URL}?name=${FILE_NAME}&dir=cli-apps-${CLI_VERSION}"
 
-# --- Extract ---
-tar -xvf "$FILE_NAME"
-
-# --- Install ---
-TARGET_DIR="$HOME/.dataos/bin"
+# --- Extract & Install ---
 mkdir -p "$TARGET_DIR"
-mv ${OS_NAME}-${ARCH_NAME}/dataos-ctl "$TARGET_DIR/"
+tar -xzf "$FILE_NAME"
+mv ${ARCH_NAME}/${APP_NAME} "$TARGET_DIR/"
+chmod +x "$TARGET_DIR/$APP_NAME"
 
-# --- Add to PATH ---
+# --- PATH update ---
 SHELL_RC="$HOME/.bashrc"
 if [[ "$SHELL" == *"zsh" ]]; then SHELL_RC="$HOME/.zshrc"; fi
 if ! grep -q "$TARGET_DIR" "$SHELL_RC"; then
   echo "export PATH=\$PATH:$TARGET_DIR" >> "$SHELL_RC"
-  echo "✅ Added DataOS CLI to PATH in $SHELL_RC"
+  echo "✅ Added $TARGET_DIR to PATH in $SHELL_RC"
 fi
 
-echo "🎉 Installed DataOS CLI v${CLI_VERSION}"
-echo "➡️ Run 'source $SHELL_RC' or restart your terminal."
-echo "➡️ Verify with: dataos-ctl version"
-
+echo "🎉 Installed $APP_NAME v${CLI_VERSION}"
+echo "➡️ Run 'source $SHELL_RC' or restart terminal."
+echo "➡️ Verify with: $APP_NAME version"
